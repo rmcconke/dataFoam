@@ -79,7 +79,7 @@ def get_field_type(fieldname,field):
     if ndims == 2: 
         fieldtype = 'vector'
     if ndims == 3:
-        if fieldname in ['S','Shat','b','tau']:
+        if fieldname in ['S','Shat','b','tau','a']:
             fieldtype = 'symm_matrix'
         else: 
             fieldtype = 'matrix'
