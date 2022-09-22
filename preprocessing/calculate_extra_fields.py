@@ -26,7 +26,7 @@ def calc_S_R(ref_field_dir,ref_case_prefix_and_name):
     print('    Calculating S and R for '+ref_case_prefix_and_name+ ' in '+ref_field_dir)
     gradU = np.load(os.path.join(ref_field_dir,ref_case_prefix_and_name+'_gradU.npy'))
     S = 0.5*(gradU + np.transpose(gradU,(0,2,1)))
-    R = 0.5*(gradU - np.transpose(gradU,(0,2,1)))
+    R = -0.5*(gradU - np.transpose(gradU,(0,2,1))) #negative sign because OpenFOAM outputs the transpose of the Jacobian. negative sign matches convention used in RANS callculations.
     np.save(os.path.join(ref_field_dir,ref_case_prefix_and_name+'_S.npy'),S)
     np.save(os.path.join(ref_field_dir,ref_case_prefix_and_name+'_R.npy'),R)
     print('    Saved calculated results for S and R.')
@@ -98,3 +98,5 @@ def calc_ls_nut_aperp(ref_field_dir,ref_case_prefix_and_name):
     np.save(os.path.join(ref_field_dir,ref_case_prefix_and_name+'_aperp23_ls.npy'),aperp_nnls[:,1,2])
     np.save(os.path.join(ref_field_dir,ref_case_prefix_and_name+'_aperp33_ls.npy'),aperp_nnls[:,2,2])
     np.save(os.path.join(ref_field_dir,ref_case_prefix_and_name+'_r2_ls.npy'),r2_nnls)
+
+    

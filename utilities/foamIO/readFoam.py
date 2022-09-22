@@ -108,7 +108,7 @@ def get_cell_centres(foam_directory):
     # the Cx, Cy, Cz files.
     try:
         os.system('postProcess -case ' + foam_directory 
-                  + ' -func writeCellCentres > log.writeCellCentres')
+                  + ' -func writeCellCentres >' + foam_directory+'/log.writeCellCentres')
         Cx = readFoamScalar(os.path.join(foam_directory,str(0),'Cx'))
         Cy = readFoamScalar(os.path.join(foam_directory,str(0),'Cy'))
         Cz = readFoamScalar(os.path.join(foam_directory,str(0),'Cz'))

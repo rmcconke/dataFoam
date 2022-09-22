@@ -6,9 +6,11 @@ Created on Fri Oct 22 17:25:35 2021
 @author: ryley
 """
 import numpy as np
-
+from numpy import inf
 def writeFoam_genericscalar_CUBE(filename,field_name,field):
     # Writes a generic scalar field with zero dimensions, for visualization
+    field[field == -inf] = -1E6
+    field[field == inf] = 1E6
     cells = len(field)
     print('Writing {} to file {}'.format(field_name,filename))
     nan_count = np.count_nonzero(np.isnan(field))
@@ -230,6 +232,87 @@ def writeFoam_nut_L_CUBE(filename,nut_L):
             type            zeroGradient;
         }
     
+    
+    }
+    // ************************************************************************* //""")
+    file.close()
+    
+def writeFoam_pfv_CUBE(filename, pfv):
+    pfv[pfv == -inf] = -1E6
+    pfv[pfv == inf] = 1E6
+
+    # Writes the pfv file
+    cells = len(pfv)
+    #aperp = np.column_stack((aperp[:,0,0],aperp[:,0,1],aperp[:,0,2],
+    #                                   aperp[:,1,1],aperp[:,1,2],
+    #                                                -aperp[:,0,0]-aperp[:,1,1]))
+    leftbracket = np.repeat('(',len(pfv))
+    rightbracket = np.repeat(')',len(pfv))
+    array_write = np.column_stack((leftbracket,pfv,rightbracket))
+    print('Writing pfv to file '+filename)
+    file = open(filename,'w')
+    file.write("""/*--------------------------------*- C++ -*----------------------------------*\
+    | =========                 |                                                 |
+    | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+    |  \\    /   O peration     | Version:  v2006                                 |
+    |   \\  /    A nd           | Website:  www.openfoam.com                      |
+    |    \\/     M anipulation  |                                                 |
+    \*---------------------------------------------------------------------------*/
+    FoamFile
+    {
+        version     2.0;
+        format      ascii;
+        class       volVectorField;
+        object      pfv;
+    }
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    
+    dimensions      [0 1 -2 0 0 0 0];
+    
+    internalField nonuniform List<vector>
+    """)
+    file.write(str(cells) + """ (
+        """)
+    np.savetxt(file, array_write,fmt='%s')
+    file.write(""");
+    boundaryField
+    {
+            INLET
+            {
+                type            calculated;
+                value           uniform (0 0 0);
+            }
+            CUBE1
+            {
+                type            fixedValue;
+                value           uniform (0 0 0);
+            }
+            CUBE2
+            {
+                type            fixedValue;
+                value           uniform (0 0 0);
+            }
+            WALL
+            {
+                type            fixedValue;
+                value           uniform (0 0 0);
+            }           
+            RIGHT
+            {
+                type            cyclic;
+            }
+            LEFT
+            {
+                type            cyclic;
+            }
+            TOP
+            {
+                type            zeroGradient;
+            }
+            OUTLET
+            {
+                type            zeroGradient;
+            }
     
     }
     // ************************************************************************* //""")

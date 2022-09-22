@@ -33,7 +33,7 @@ class MLDatasetFromFoamCase:
         self.cells = get_cell_count(self.directory)
         self.endtime = get_endtime(self.directory)
         print('    Getting cell centres for the case....')
-        self.Cx, self.Cy, self.Cz = get_cell_centres(self.directory)        
+        self.Cx, self.Cy, self.Cz = get_cell_centres(self.directory)     
         
         if self.case_type == 'kepsilonphitf':
             self.foam_scalars_list = ['k',
@@ -106,6 +106,7 @@ class MLDatasetFromFoamCase:
                                 'DUDty',
                                 'DUDtz',
                                 'wallDistance',
+                                'nut'
                                 ]
                 
             self.foam_symmtensors_list = ['S',
@@ -122,7 +123,6 @@ class MLDatasetFromFoamCase:
                                 ]   
             self.read_invariants_flag = True
 
-            
         if self.case_type == 'reference':
             self.foam_scalars_list = [
                                 'Cx',
@@ -132,9 +132,23 @@ class MLDatasetFromFoamCase:
                                 'Uy',
                                 'Uz',
                                 ]
-                
-            self.foam_symmtensors_list = ['tau']
-            self.foam_tensors_list = ['gradU'] 
+            self.foam_symmtensors_list = []
+            self.foam_tensors_list = []
+
+        if self.case_type == 'reference_mapped':
+            self.foam_scalars_list = [
+                                'gradaperpxx_x',
+                                'gradaperpxy_x',
+                                'gradaperpxz_x',
+                                'gradaperpxy_y',
+                                'gradaperpyy_y',
+                                'gradaperpyz_y',
+                                'gradaperpxz_z',
+                                'gradaperpyz_z',
+                                'gradaperpzz_z',
+                                ]
+            self.foam_symmtensors_list = []
+            self.foam_tensors_list = []
             self.read_invariants_flag = False
             
     def writeFields(self):
@@ -187,7 +201,6 @@ class MLDatasetFromFoamCase:
         self.dataset_prefix = dataset_prefix #+ '_'+self.case_name
         self.save_dir = os.path.join(self.data_save_path,dataset_prefix)
 
-
         print('Reading scalars.... ')
         for foam_scalar in self.foam_scalars_dict:
             self.foam_scalars_dict[foam_scalar] = readFoamScalar(os.path.join(self.foamdatatime,foam_scalar),cells=self.cells)
@@ -217,7 +230,16 @@ class MLDatasetFromFoamCase:
             np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_lambda.npy'), self.lda)
             np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_Tensors.npy'), self.basis_tensors)
             np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_I1.npy'), self.I1)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_I2.npy'), self.I2)   
+            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_I2.npy'), self.I2)
+            
+        if self.case_type == 'reference_mapped':
+            pfv_x = self.foam_scalars_dict['gradaperpxx_x'] + self.foam_scalars_dict['gradaperpxy_x'] + self.foam_scalars_dict['gradaperpxz_x']
+            pfv_y = self.foam_scalars_dict['gradaperpxy_y'] + self.foam_scalars_dict['gradaperpyy_y'] + self.foam_scalars_dict['gradaperpyz_y']
+            pfv_z = self.foam_scalars_dict['gradaperpxz_z'] + self.foam_scalars_dict['gradaperpyz_z'] + self.foam_scalars_dict['gradaperpzz_z']
+            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+'pfv_x'+'.npy'),pfv_x)
+            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+'pfv_y'+'.npy'),pfv_y)
+            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+'pfv_z'+'.npy'),pfv_z)
+
     
     def get_cell_volumes(self):
         self.CV = get_cell_volumes(self.directory)
