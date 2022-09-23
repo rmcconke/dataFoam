@@ -1,5 +1,5 @@
-$(OBJECTS_DIR)/writeFieldsMLr1_komegasst.C.dep: \
-writeFieldsMLr1_komegasst.C \
+$(OBJECTS_DIR)/writeFields_komegasst.C.dep: \
+writeFields_komegasst.C \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/fvCFD.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/Time.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/TimePaths.H \

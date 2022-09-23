@@ -63,9 +63,32 @@ int main(int argc, char *argv[])
     {
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
-		Info<< "Writing tau for LES" << nl << endl;
-		tau = UPrime2Mean+turbulence->R();
-		tau.write();
+		Info<< "Calculating fields for LES" << nl << endl;
+        // Reynolds stress tensor and related tensors
+		//tauMean = UPrime2Mean+turbulence->R();
+        // Note: currently assumes eddy viscosity SGS
+        subgrid_tauMean = ((2.0/3.0)*I)*kMean_model - (nutMean)*dev(twoSymm(fvc::grad(UMean))),
+		tauMean = UPrime2Mean+subgrid_tauMean;
+        aMean = dev(tauMean);
+        bMean = aMean/(tr(tauMean));
+        kMean = 0.5*tr(tauMean);
+
+        // Velocity gradient and related tensors
+		gradUMean = fvc::grad(UMean);
+		gradUMean = gradUMean.T(); 	// Output the Jacobian, a more common form of the velocity gradient tensor
+       	SMean = symm(fvc::grad(UMean));
+		RMean = -skew(fvc::grad(UMean)); // grad(UMean) produces the transpose of the Jacobian, RMean is defined based on the Jacobian, hence negative sign
+
+		Info<< "Writing fields for LES...." << nl << endl;
+        subgrid_tauMean.write();
+		tauMean.write();
+        aMean.write();
+        bMean.write();
+        kMean.write();
+        gradUMean.write();
+        SMean.write();
+        RMean.write();
+
         runTime.printExecutionTime(Info);
     }
 

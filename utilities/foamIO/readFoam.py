@@ -8,68 +8,25 @@ Created on Fri Oct 22 17:25:35 2021
 import numpy as np
 import os
 import re
+import Ofpp
 
-def readFoamVector(file, cells=None):
-    # Returns a numpy vector of shape (cells,3) for the internal vector field
-    # at the input file. If something goes wrong, returns a uniform zero vector.
-    print('    Reading vector: '+file)
-    cleanFoamFile(file)
-    if cells == None:
-        cells= get_cell_count(os.path.dirname(os.path.dirname(file)))
-    try:
-        Vector = np.genfromtxt(file+'_cleaned',skip_header=23,max_rows=cells)
-        removeCleanedFoamFile(file)
-    except: 
-        print('--->ERROR! Could not read vector: '+file+', setting to uniform zero')
-        Vector = np.zeros(cells*3)
-    Vector = Vector.reshape((cells,3))
-    return Vector
+def readFoamField(file):
+    field = Ofpp.parse_internal_field(file)
+    if field.ndim > 1: 
+        if field.shape[1] == 6:
+            field = reshape_symmTensor(field)
+        elif field.shape[1] == 9:
+            field = reshape_tensor(field)
+    return field
 
-def readFoamTensor(file,cells=None):
-    # Returns a numpy tensor of shape (cells,3,3) for the internal tensor field
-    # at the input file. If something goes wrong, returns a uniform zero tensor.
-    print('    Reading tensor: '+file)
-    cleanFoamFile(file)
-    if cells == None:
-        cells= get_cell_count(os.path.dirname(os.path.dirname(file)))
-    try:
-        Tensor = np.genfromtxt(file+'_cleaned',skip_header=23,max_rows=cells)
-        removeCleanedFoamFile(file)
-    except: 
-        print('--->ERROR! Could not read tensor: '+file+', setting to uniform zero')
-        Tensor = np.zeros(cells*9)
-    Tensor = Tensor.reshape((cells,3,3))
-    return Tensor
-
-def readFoamSymmTensor(file,cells=None):
-    # Returns a numpy tensor of shape (cells,3,3) for the internal symmTensor field
-    # at the input file. If something goes wrong, returns a uniform zero symmTensor.
-    print('    Reading symmTensor: '+file)
-    cleanFoamFile(file)
-    if cells == None:
-        cells= get_cell_count(os.path.dirname(os.path.dirname(file)))
-    try:
-        Tensor = np.genfromtxt(file+'_cleaned',skip_header=23,max_rows=cells)
-        removeCleanedFoamFile(file)
-    except: 
-        print('--->ERROR! Could not read symmTensor: '+file+', setting to uniform zero')
-        Tensor = np.zeros(cells*6)
+def reshape_symmTensor(Tensor):
     Tensor = np.stack((Tensor[:,0], Tensor[:,1], Tensor[:,2], Tensor[:,1], Tensor[:,3], Tensor[:,4], Tensor[:,2], Tensor[:,4],Tensor[:,5]),axis=1)
-    Tensor = Tensor.reshape((cells,3,3))
+    Tensor = reshape_tensor(Tensor)
     return Tensor
 
-def readFoamScalar(file,cells=None):
-    # Returns a numpy scalar of shape (cells) for the internal scalar field
-    # at the input file. If something goes wrong, returns a uniform zero scalar.
-    print('    Reading scalar: '+file)
-    if cells == None:
-        cells= get_cell_count(os.path.dirname(os.path.dirname(file)))
-    try:
-        scalar=np.genfromtxt(file,skip_header=23,max_rows=cells)
-    except: 
-        print('--->ERROR! Could not read scalar: '+file+', setting to uniform zero')
-        scalar = np.zeros(cells)
-    return scalar
+def reshape_tensor(Tensor):
+    Tensor = Tensor.reshape((len(Tensor),3,3))
+    return Tensor
 
 def get_cell_count(foam_directory):
     # Returns scalar number of cells for the case at foam_directory.
@@ -104,32 +61,12 @@ def get_endtime(foam_directory):
     return endtime
 
 def get_cell_centres(foam_directory):
-    # Returns three vectors, Cx, Cy, Cz. Runs writeCellCentres then deletes
-    # the Cx, Cy, Cz files.
-    try:
-        os.system('postProcess -case ' + foam_directory 
-                  + ' -func writeCellCentres >' + foam_directory+'/log.writeCellCentres')
-        Cx = readFoamScalar(os.path.join(foam_directory,str(0),'Cx'))
-        Cy = readFoamScalar(os.path.join(foam_directory,str(0),'Cy'))
-        Cz = readFoamScalar(os.path.join(foam_directory,str(0),'Cz'))
-        os.system('rm -r '+foam_directory+'/0/Cx')
-        os.system('rm -r '+foam_directory+'/0/Cy')
-        os.system('rm -r '+foam_directory+'/0/Cz')
-        os.system('rm -r '+foam_directory+'/0/C')
-    except:
-        raise LookupError('Could not get cell centres for the foam case '+foam_directory)
-    return Cx, Cy, Cz
-
-def get_cell_volumes(foam_directory):
-    # Returns the cell volumes for foam_directory as a vector. 
-    # Runs writeCellCentres then deletes the V file.
-    try: 
-        os.system('postProcess -func writeCellVolumes > log.writeCellVolumes')
-        V = readFoamScalar(os.path.join(foam_directory,str(0),'V'))
-        os.system('rm -r '+foam_directory+'/0/V')
-    except:
-        raise LookupError('Could not get cell volumes for the foam case '+foam_directory)
-    return V
+    # Returns three vectors, Cx, Cy, Cz. Runs writeCellCentres then reads the files.
+    logfile = os.path.join(foam_directory,'log.writeCellCentres')
+    os.system(f'postProcess -case {foam_directory} -func writeCellCentres | tee {logfile}')
+    cell_centres = readFoamField(os.path.join(foam_directory,'0/C'))
+    #Cx, Cy, Cz = cell_centres[:,0], cell_centres[:,1], cell_centres[:,2]  
+    return cell_centres
     
 def cleanFoamFile(file):
     # Uses sed to strip the leading/trailing brackets from a file, creating

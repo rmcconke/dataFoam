@@ -57,7 +57,7 @@ volTensorField R //Mean rotation rate
 	dimensionedTensor("R",dimensionSet(0,0,-1,0,0,0,0),tensor::zero)
 ); 
 
-volTensorField gradU //Mean rotation rate
+volTensorField gradU //Velocity gradient (note: transpose of the Jacobian is used in OpenFOAM)
 (
 	IOobject
 	(
@@ -128,18 +128,32 @@ volScalarField q4 // Ratio of total Reynolds stress to TKE
 );
 
 
-volScalarField T_t
+volScalarField T_t_ke
 (
     IOobject
     (
-        "T_t",
+        "T_t_ke",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
     mesh,
-	dimensionedScalar("T_t",dimensionSet(0,0,1,0,0,0,0),1.0)
+	dimensionedScalar("T_t_ke",dimensionSet(0,0,1,0,0,0,0),1.0)
+);
+
+volScalarField T_t_nut
+(
+    IOobject
+    (
+        "T_t_nut",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+	dimensionedScalar("T_t_nut",dimensionSet(0,0,1,0,0,0,0),1.0)
 );
 
 volScalarField T_k
@@ -154,6 +168,20 @@ volScalarField T_k
     ),
     mesh,
 	dimensionedScalar("T_k",dimensionSet(0,0,1,0,0,0,0),1.0)
+);
+
+volScalarField C_Ak
+(
+    IOobject
+    (
+        "C_Ak",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh,
+	dimensionedScalar("C_Ak",dimensionSet(0,-1,2,0,0,0,0),1.0)
 );
 
 volVectorField gradp 

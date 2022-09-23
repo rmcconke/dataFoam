@@ -64,41 +64,58 @@ int main(int argc, char *argv[])
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
 		Info<< "Calculating fields for ML" << nl << endl;
-       		S = symm(fvc::grad(U));
-		R = -skew(fvc::grad(U)); // grad(U) produces the transpose of the Jacobian, R is defined based on the Jacobian, hence negative sign
+
+		// Time scales
+		T_t_ke = turbulence->k()/turbulence->epsilon();
+		T_t_nut = turbulence->nut()/turbulence->k();
+		T_k = sqrt(turbulence->nu()/turbulence->epsilon());
+
+		// Velocity derivatives
+		DUDt = U & gradU.T(); 	// Checked with component wise expression for the convective derivative
 		gradU = fvc::grad(U);
 		gradU = gradU.T(); 	// Output the Jacobian, a more common form of the velocity gradient tensor
+
+       	S = symm(fvc::grad(U));
+		R = -skew(fvc::grad(U)); // grad(U) produces the transpose of the Jacobian, R is defined based on the Jacobian, hence negative sign
+
+		Shat = T_t_nut * S;
+		Rhat = T_t_nut * R;
+
+		// Pressure gradient
 		gradp = fvc::grad(p);
-		gradk = fvc::grad(turbulence->k());
-		gradomega = fvc::grad(turbulence->omega());
-		DUDt = U & gradU.T(); 	// Checked with component wise expression for the convective derivative
 		Ap.replace(1, -gradp.component(2));
 		Ap.replace(2,  gradp.component(1));
 		Ap.replace(3,  gradp.component(2));
 		Ap.replace(5, -gradp.component(0));
 		Ap.replace(6, -gradp.component(1));
 		Ap.replace(7,  gradp.component(0));
-		Aphat = Ap/(max(mag(DUDt),SMALL_CONVDER)); //For different normalization: Aphat = Ap/(turbulence->epsilon()/sqrt(turbulence->k()));
+		//Old normalization: Aphat = Ap/(max(mag(DUDt),SMALL_CONVDER));
+		Aphat = C_Ak*Ap;
+
+		// TKE gradient
+		gradk = fvc::grad(turbulence->k());
 		Ak.replace(1, -gradk.component(2));
 		Ak.replace(2,  gradk.component(1));
 		Ak.replace(3,  gradk.component(2));
 		Ak.replace(5, -gradk.component(0));
 		Ak.replace(6, -gradk.component(1));
 		Ak.replace(7,  gradk.component(0));
-		Akhat = Ak/(turbulence->epsilon()/sqrt(turbulence->k()));
-		T_t = turbulence->k()/turbulence->epsilon();
-		T_k = sqrt(turbulence->nu()/turbulence->epsilon());
-		Shat = T_t * S;
-		Rhat = T_t * R;
+		Akhat = C_Ak*Ak;//Ak/(turbulence->epsilon()/sqrt(turbulence->k()));
 
-		volScalarField epsilon = turbulence->epsilon();
-		// q's are from ref Kaandorp 2020, 10.1016/j.compfluid.2020.104497
-		q1 = 0.5 * (mag(R)*mag(R) - mag(S)*mag(S)) /(max(mag(S)*mag(S),SMALL_S2)); // Ratio of excess rotation rate to strain rate
+		// omega gradient
+		gradomega = fvc::grad(turbulence->omega());
+
+		// Other turbulence fields
 		wallDistance = wallDist(mesh).y();
+		volScalarField epsilon = turbulence->epsilon();
+
+		// q's from ref Kaandorp 2020, 10.1016/j.compfluid.2020.104497
+		q1 = 0.5 * (mag(R)*mag(R) - mag(S)*mag(S)) /(max(mag(S)*mag(S),SMALL_S2)); // Ratio of excess rotation rate to strain rate
 		q2 = min((sqrt(turbulence->k())*wallDistance/(50.0*turbulence->nu())),2.0);  // Wall distance based Reynolds Number
-		q3 = T_t * mag(S); // Ratio of turbulent time scale to mean strain time scale
+		q3 = T_t_ke * mag(S); // Ratio of turbulent time scale to mean strain time scale
 		q4 = mag(turbulence->R())/(turbulence->k()); //Ratio of total to 1/2 * normal Reynolds stresses (TKE)
 
+		// Basis tensors
 		B1 = Shat & Shat;
 		B2 = Shat & Shat & Shat;
 		B3 = Rhat & Rhat;
@@ -161,6 +178,7 @@ int main(int argc, char *argv[])
 		B46= Rhat & Akhat & Aphat & Shat & Shat;
 		B47= Rhat & Aphat & Shat & Akhat & Shat & Shat;
 
+		// Invariants
 		I1_1 = tr(B1);
 		I1_2 = tr(B2);
 		I1_3 = tr(B3);
@@ -332,11 +350,12 @@ int main(int argc, char *argv[])
 		T10= (Rhat & Shat & Shat & Rhat & Rhat) - (Rhat & Rhat & Shat & Shat & Rhat);
 		
 		lambda1 = tr(Shat & Shat);
-    		lambda2 = tr(Rhat & Rhat);
-    		lambda3 = tr(Shat & Shat & Shat);
-    		lambda4 = tr(Rhat & Rhat & Shat);
-    		lambda5 = tr(Rhat & Rhat & Shat & Shat);
-		
+    	lambda2 = tr(Rhat & Rhat);
+    	lambda3 = tr(Shat & Shat & Shat);
+    	lambda4 = tr(Rhat & Rhat & Shat);
+    	lambda5 = tr(Rhat & Rhat & Shat & Shat);
+
+		Info<< "Writing fields....\n" << endl;
 		T1.write();
 		T2.write();
 		T3.write();
@@ -539,6 +558,7 @@ int main(int argc, char *argv[])
 		I3_46.write();
 		I3_47.write();
 		*/
+
 		q1.write();
 		q2.write();
 		q3.write();
@@ -547,7 +567,8 @@ int main(int argc, char *argv[])
 		Shat.write();
 		Rhat.write();
 		R.write();
-		T_t.write();
+		T_t_ke.write();
+		T_t_nut.write();
 		T_k.write();
 		lambda1.write();
 		lambda2.write();
@@ -564,11 +585,12 @@ int main(int argc, char *argv[])
 		Ak.write();
 		Aphat.write();
 		Akhat.write();
+		C_Ak.write();
 		epsilon.write();
-        	runTime.write();
+        runTime.write();
 		DUDt.write();
 		wallDistance.write();
-        	runTime.printExecutionTime(Info);
+        runTime.printExecutionTime(Info);
     }
 
     Info<< "End\n" << endl;
