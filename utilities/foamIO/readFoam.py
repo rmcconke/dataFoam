@@ -48,6 +48,7 @@ def get_endtime(foam_directory):
     try: 
         folders_list = next(os.walk(foam_directory))[1]
         endtime=0
+        folders_list = [ x for x in folders_list if "processor" not in x ]
         for folder in folders_list:
             x = re.findall("\\d", folder)
             result = "".join(x)

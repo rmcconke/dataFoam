@@ -59,7 +59,8 @@ class MLDatasetFromFoamCase:
                                 'Av2hat',
                                 'Akhat',
                                 'gradU',
-                                'skewness'
+                                'skewness',
+                                'C'
                                 ]
             self.read_invariants_flag = True
             self.read_basis_tensors_flag = True
@@ -91,9 +92,10 @@ class MLDatasetFromFoamCase:
                                 'Aphat',
                                 'Akhat',
                                 'gradU',
-                                'skewness'
+                                'skewness',
+                                'C'
                                 ]
-            self.writeFieldsApplication='writeFields_komegasst'
+            self.writeFieldsApplication='writeFields_komegasstMean'
             self.read_invariants_flag = True
             self.read_basis_tensors_flag = True
             self.read_q_flag = True
@@ -108,8 +110,10 @@ class MLDatasetFromFoamCase:
                                 'SMean',
                                 'RMean',
                                 'kMean',
+                                'kMean_tauMean',
                                 'aMean',
-                                'bMean'
+                                'bMean',
+                                'C'
                                 ]
             self.writeFieldsApplication='writeFields_LES'
             self.read_invariants_flag = False
@@ -142,16 +146,17 @@ class MLDatasetFromFoamCase:
             os.mkdir(os.path.join(self.foam_parent_dir, '02-writeFields'))
 
         self.writeFieldsDirectory = os.path.join(self.foam_parent_dir,'02-writeFields',self.case_name)
-        if (self.overwrite_flag) and (os.path.isdir(os.path.join(self.writeFieldsDirectory))):
+        if (self.overwrite_flag):
             print('[dataFoam] Writing new fields....')
-            os.system(f'rm -rf {self.writeFieldsDirectory}')
+            if (os.path.isdir(os.path.join(self.writeFieldsDirectory))):
+                os.system(f'rm -rf {self.writeFieldsDirectory}')
             os.system('cp -rf '+self.directory+' '+self.writeFieldsDirectory)
             #os.system('cp -r '+os.path.join(self.foam_parent_dir,'02-writeFields','Runwrite')+' '+self.writeFieldsDirectory)
             os.chdir(self.writeFieldsDirectory)
             if self.save_mesh_skewness:
                 os.system(f'checkMesh -writeFields skewness -time {self.endtime} | tee log.checkMesh')
             print('[dataFoam] Getting cell centres for the case....')
-            self.C = get_cell_centres(self.directory)     
+            self.C = get_cell_centres(self.writeFieldsDirectory)     
             os.system(f'{self.writeFieldsApplication} | tee log.writeFields')
         else:
             print('[dataFoam] Skipping writing fields....')

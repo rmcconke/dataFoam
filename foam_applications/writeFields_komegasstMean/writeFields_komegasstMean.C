@@ -66,21 +66,23 @@ int main(int argc, char *argv[])
 		Info<< "Calculating fields for ML" << nl << endl;
 
 		// Time scales
-		T_t_ke = turbulence->k()/turbulence->epsilon();
-		T_t_nut = turbulence->nut()/turbulence->k();
-		T_k = sqrt(turbulence->nu()/turbulence->epsilon());
-
+		epsilon = 0.09*k*omega;
+		T_t_ke = k/epsilon;
+		T_t_nut = nut/k;
+		T_k = sqrt(turbulence->nu()/epsilon);
+		C_Ak = nut/(sqrt(k)*k);
+		
 		// Velocity derivatives
-		DUDt = U & gradU.T(); 	// Checked with component wise expression for the convective derivative
 		gradU = fvc::grad(U);
 		gradU = gradU.T(); 	// Output the Jacobian, a more common form of the velocity gradient tensor
+		DUDt = U & gradU.T(); 	// Checked with component wise expression for the convective derivative
 
        	S = symm(fvc::grad(U));
 		R = -skew(fvc::grad(U)); // grad(U) produces the transpose of the Jacobian, R is defined based on the Jacobian, hence negative sign
 
 		Shat = T_t_nut * S;
 		Rhat = T_t_nut * R;
-// BAD - FIX BEFORE RUNNING - C_AK IS NOT CALCULATED
+
 		// Pressure gradient
 		gradp = fvc::grad(p);
 		Ap.replace(1, -gradp.component(2));
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
 		Aphat = C_Ak*Ap;
 
 		// TKE gradient
-		gradk = fvc::grad(turbulence->k());
+		gradk = fvc::grad(k);
 		Ak.replace(1, -gradk.component(2));
 		Ak.replace(2,  gradk.component(1));
 		Ak.replace(3,  gradk.component(2));
@@ -103,17 +105,17 @@ int main(int argc, char *argv[])
 		Akhat = C_Ak*Ak;//Ak/(turbulence->epsilon()/sqrt(turbulence->k()));
 
 		// omega gradient
-		gradomega = fvc::grad(turbulence->omega());
+		gradomega = fvc::grad(omega);
 
 		// Other turbulence fields
 		wallDistance = wallDist(mesh).y();
-		volScalarField epsilon = turbulence->epsilon();
 
 		// q's from ref Kaandorp 2020, 10.1016/j.compfluid.2020.104497
 		q1 = 0.5 * (mag(R)*mag(R) - mag(S)*mag(S)) /(max(mag(S)*mag(S),SMALL_S2)); // Ratio of excess rotation rate to strain rate
-		q2 = min((sqrt(turbulence->k())*wallDistance/(50.0*turbulence->nu())),2.0);  // Wall distance based Reynolds Number
+		q2 = min((sqrt(k)*wallDistance/(50.0*turbulence->nu())),2.0);  // Wall distance based Reynolds Number
 		q3 = T_t_ke * mag(S); // Ratio of turbulent time scale to mean strain time scale
-		q4 = mag(turbulence->R())/(turbulence->k()); //Ratio of total to 1/2 * normal Reynolds stresses (TKE)
+		volSymmTensorField turbR = (2.0/3.0)*I*k - (nut)*dev(twoSymm(fvc::grad(U)));
+		q4 = mag(turbR)/(k); //Ratio of total to 1/2 * normal Reynolds stresses (TKE)
 
 		// Basis tensors
 		B1 = Shat & Shat;

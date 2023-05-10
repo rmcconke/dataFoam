@@ -45,7 +45,7 @@ volScalarField kMean_model
 (
     IOobject
     (
-        "k", //Note: needs to be changed once we have updated LES data
+        "kMean",
         runTime.timeName(),
         mesh,
         IOobject::MUST_READ,
@@ -54,20 +54,20 @@ volScalarField kMean_model
     mesh
 );
 
-volScalarField kMean
+volScalarField kMean_tauMean
 (
     IOobject
     (
-        "kMean",
+        "kMean_tauMean",
         runTime.timeName(),
         mesh,
         IOobject::NO_READ,
         IOobject::AUTO_WRITE
     ),
     mesh,
-    dimensionedScalar("kMean",dimensionSet(0,2,-2,0,0,0,0),0.0)
-
+    dimensionedScalar("kMean_tauMean",dimensionSet(0,2,-2,0,0,0,0),0.0)
 );
+
 
 Info<< "Reading field nutMean\n" << endl;
 volScalarField nutMean

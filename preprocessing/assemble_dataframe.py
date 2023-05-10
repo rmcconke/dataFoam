@@ -8,8 +8,6 @@ Created on Thu Oct 21 13:22:26 2021
 
 import os
 import numpy as np
-from sklearn.metrics import r2_score
-from sklearn.linear_model import LinearRegression
 import pandas as pd
 def assemble_dataframe(data_parent_dir,
                        field_dict,
@@ -30,7 +28,7 @@ def assemble_dataframe(data_parent_dir,
             for field_name in field_dict[field_dir]:
                 print('        '+field_name)
                 try: 
-                    field = np.load(os.path.join(data_parent_dir,field_dir,field_dir+'_'+case+'_'+field_name+'.npy'))
+                    field = np.float32(np.load(os.path.join(data_parent_dir,field_dir,field_dir+'_'+case+'_'+field_name+'.npy')))
                 except:
                     raise LookupError('Cannot find field '+field_name)
                 field_type = get_field_type(field_name,field)
@@ -66,11 +64,20 @@ def assemble_dataframe(data_parent_dir,
                         dataframe_case = add_data(dataframe_case,field_dir,field_name+'_'+str(i+1)+'_22',field[:,i,1,1])
                         dataframe_case = add_data(dataframe_case,field_dir,field_name+'_'+str(i+1)+'_23',field[:,i,1,2])
                         dataframe_case = add_data(dataframe_case,field_dir,field_name+'_'+str(i+1)+'_33',field[:,i,2,2])
-            
+        dataframe_case=dataframe_case.astype('float32')
         dataframe_case['Case'] = case
         dataframe_main = pd.concat((dataframe_main,dataframe_case),axis=0)
-    print('    Saving dataframe to '+output_file)
+        print(str(dataframe_main.dtypes.to_string()))
+
+    dataframe_main['Case']=dataframe_main['Case'].astype('string')
+    print('Final dataframe columns:')
+    print(dataframe_main.columns)
+    print('Memory info for final dataframe: ')
+    print(dataframe_main.memory_usage(deep=True).to_string())
+    print(str(dataframe_main.dtypes.to_string()))
+    print('Saving dataframe to '+output_file)
     dataframe_main.to_csv(output_file)
+    print('Finished saving dataframe.')
 
 def get_field_type(fieldname,field):
     ndims = field.ndim

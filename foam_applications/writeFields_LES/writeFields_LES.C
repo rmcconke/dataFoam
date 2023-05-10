@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 		tauMean = UPrime2Mean+subgrid_tauMean;
         aMean = dev(tauMean);
         bMean = aMean/(tr(tauMean));
-        kMean = 0.5*tr(tauMean);
+        kMean_tauMean = 0.5*tr(tauMean);
 
         // Velocity gradient and related tensors
 		gradUMean = fvc::grad(UMean);
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 		tauMean.write();
         aMean.write();
         bMean.write();
-        kMean.write();
+        kMean_tauMean.write();
         gradUMean.write();
         SMean.write();
         RMean.write();
