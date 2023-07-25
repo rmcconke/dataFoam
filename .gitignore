@@ -1,0 +1,11 @@
+*ipynb_checkpoints*
+*__pycache__*
+*.pyc
+example_data/writeFields
+example_data/numpy/komegasst/*
+example_data/numpy/DNS/*
+example_data/numpy/DNS_mapped/*
+example_data/output_example.csv
+test_data/numpy/*
+test_data/writeFields
+

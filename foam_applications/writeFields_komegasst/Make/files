@@ -1,3 +1,0 @@
-writeFields_komegasst.C
-
-EXE = $(FOAM_USER_APPBIN)/writeFields_komegasst

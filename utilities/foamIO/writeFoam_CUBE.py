@@ -20,10 +20,10 @@ def writeFoam_anyfield_CUBE(field,filename):
     #field[field == -inf] = -1E6
     #field[field == inf] = 1E6
     cells = len(field)
-    print('Writing {} to file {}'.format(field_name,filename))
+    print('[dataFoam] Writing {} to file {}'.format(field_name,filename))
     nan_count = np.count_nonzero(np.isnan(field))
     if nan_count > 0:
-        print('\n     WARNING! Found '+str(nan_count)+' NaN values in the field. Replacing these with 1E10 when writing to foam, but will still be present in saved array.')
+        print('\n[dataFoam] WARNING! Found '+str(nan_count)+' NaN values in the field. Replacing these with 1E10 when writing to foam, but will still be present in saved array.')
         field=np.nan_to_num(field, copy=True, nan=1E10)
 
     fieldclass = 'volScalarField'
@@ -123,7 +123,7 @@ def writeFoam_ap_CUBE(filename, aperp):
     leftbracket = np.repeat('(',len(aperp))
     rightbracket = np.repeat(')',len(aperp))
     array_write = np.column_stack((leftbracket,aperp,rightbracket))
-    print('Writing aperp to file '+filename)
+    print('[dataFoam] Writing aperp to file '+filename)
     file = open(filename,'w')
     file.write("""/*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
@@ -195,7 +195,7 @@ boundaryField
 def writeFoam_nut_L_CUBE(filename,nut_L):
     # Writes the nut_L file
     cells = len(nut_L)
-    print('Writing nut_L to file {}'.format(filename))
+    print('[dataFoam] Writing nut_L to file {}'.format(filename))
     file = open(filename,'w')
     file.write("""/*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
@@ -277,7 +277,7 @@ def writeFoam_pfv_CUBE(filename, pfv):
     leftbracket = np.repeat('(',len(pfv))
     rightbracket = np.repeat(')',len(pfv))
     array_write = np.column_stack((leftbracket,pfv,rightbracket))
-    print('Writing pfv to file '+filename)
+    print('[dataFoam] Writing pfv to file '+filename)
     file = open(filename,'w')
     file.write("""/*--------------------------------*- C++ -*----------------------------------*\
     | =========                 |                                                 |

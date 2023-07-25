@@ -39,11 +39,6 @@ It loads the OpenFOAM fields at the time given by startTime in the controlDict, 
 
 int main(int argc, char *argv[])
 {
-    /*argList::addNote
-    (
-        "Steady-state solver for incompressible, turbulent flows."
-    );
-	*/
     #include "postProcess.H"
     #include "addCheckCaseOptions.H"
     #include "setRootCaseLists.H"
@@ -51,46 +46,36 @@ int main(int argc, char *argv[])
     #include "createMesh.H"
     #include "createControl.H"
     #include "createFields.H"
-    //#include "initContinuityErrs.H"
 
-    //turbulence->validate();
+    Info<< "Time = " << runTime.timeName() << nl << endl;
 
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    Info<< "Calculating extra LES fields...." << nl << endl;
+    // Reynolds stress tensor and related tensors
+    // Note: currently assumes eddy viscosity SGS
+    subgrid_tauMean = ((2.0/3.0)*I)*kMean_model - (nutMean)*dev(twoSymm(fvc::grad(UMean))); //Subgrid stress tensor
+    tauMean = UPrime2Mean+subgrid_tauMean; //Reynolds stress tensor
+    aMean = dev(tauMean); 
+    bMean = aMean/(tr(tauMean));
+    kMean_tauMean = 0.5*tr(tauMean);
 
-    Info<< "\nStarting time loop\n" << endl;
+    // Velocity gradient and related tensors
+    gradUMean = fvc::grad(UMean);
+    gradUMean = gradUMean.T(); 	// Output the Jacobian, a more common form of the velocity gradient tensor
+    SMean = symm(fvc::grad(UMean));
+    RMean = -skew(fvc::grad(UMean)); // grad(UMean) produces the transpose of the Jacobian, RMean is defined based on the Jacobian, hence negative sign
 
-    //while (simple.loop())
-    {
-        Info<< "Time = " << runTime.timeName() << nl << endl;
+    Info<< "Writing extra LES fields...." << nl << endl;
+    subgrid_tauMean.write();
+    tauMean.write();
+    aMean.write();
+    bMean.write();
+    kMean_tauMean.write();
+    gradUMean.write();
+    SMean.write();
+    RMean.write();
+    Info<< "Finished writing extra LES fields." << nl << endl;
 
-		Info<< "Calculating fields for LES" << nl << endl;
-        // Reynolds stress tensor and related tensors
-		//tauMean = UPrime2Mean+turbulence->R();
-        // Note: currently assumes eddy viscosity SGS
-        subgrid_tauMean = ((2.0/3.0)*I)*kMean_model - (nutMean)*dev(twoSymm(fvc::grad(UMean))),
-		tauMean = UPrime2Mean+subgrid_tauMean;
-        aMean = dev(tauMean);
-        bMean = aMean/(tr(tauMean));
-        kMean_tauMean = 0.5*tr(tauMean);
-
-        // Velocity gradient and related tensors
-		gradUMean = fvc::grad(UMean);
-		gradUMean = gradUMean.T(); 	// Output the Jacobian, a more common form of the velocity gradient tensor
-       	SMean = symm(fvc::grad(UMean));
-		RMean = -skew(fvc::grad(UMean)); // grad(UMean) produces the transpose of the Jacobian, RMean is defined based on the Jacobian, hence negative sign
-
-		Info<< "Writing fields for LES...." << nl << endl;
-        subgrid_tauMean.write();
-		tauMean.write();
-        aMean.write();
-        bMean.write();
-        kMean_tauMean.write();
-        gradUMean.write();
-        SMean.write();
-        RMean.write();
-
-        runTime.printExecutionTime(Info);
-    }
+    runTime.printExecutionTime(Info);
 
     Info<< "End\n" << endl;
 

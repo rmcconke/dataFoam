@@ -8,28 +8,35 @@ Created on Thu Oct 21 13:22:26 2021
 
 import os
 import numpy as np
-from dataFoam.utilities.foamIO.readFoam import readFoamField, get_endtime, get_cell_centres
+from utilities.foamIO.readFoam import readFoamField, get_endtime, get_cell_centres
+from utilities.foamIO.changeFoamSystemDictEntry import changeFoamSystemDictEntry
 
 class MLDatasetFromFoamCase: 
-    # Class for a foam case that we want to store a numpy dataset for. 
-    # The fields stored depend on the case_type.
-    # RANS case types store the full set of invariants, while reference (LES/DNS)
-    # only stores U/gradU/tau fields.
-    
-    def __init__(self,data_save_path,foam_parent_dir,case_name,case_type,overwrite_flag=True):
-        # ML path - path to main ML folder
-        # foam_parent_directory - e.g., the kepsilonphitf dataset directory
-        # case_name - unique identifier
-        # case_type: kepsilonphitf, komegasst, reference
+    """ 
+    Class for a foam case that we want to store a numpy dataset for. 
+    The fields stored depend on the case_type. the self.foam_field_list attribute is used to specify the fields which are converted from foam to numpy.
+    RANS case types store the full set of invariants, while reference cases (LES/DNS) only store U/gradU/tau related fields.
+    """
+
+    def __init__(self,data_save_path,foam_parent_dir,case_name,case_type,write_fields_application,write_fields_flag=True):
+        """Constructor
+        data_save_path: output numpy folder
+        foam_parent_directory - e.g., the komegasst foam dataset directory, which contains all of the komegasst cases
+        case_name - unique identifier, e.g. case_1p0
+        case_type: kepsilonphitf, komegasst, reference (see if statements below)
+        write_fields_application: name of OpenFOAM application called to write the additional fields (see dataFoam/foam_applications)
+        overwrite_flag: whether to call the write_fields_application, which may be time consuming
+        """
+
         print('[dataFoam] Initializing MLDatasetFromFoamCase....')
         self.case_type = case_type
         self.foam_parent_dir = foam_parent_dir
         self.directory = os.path.join(self.foam_parent_dir,case_name)
         print('[dataFoam] Case directory: '+self.directory)
-
+        self.writeFieldsApplication=write_fields_application
         self.case_name = case_name
         self.data_save_path = data_save_path
-        self.overwrite_flag=overwrite_flag
+        self.write_fields_flag=write_fields_flag
 
         self.endtime = get_endtime(self.directory)
 
@@ -68,7 +75,7 @@ class MLDatasetFromFoamCase:
             self.read_lda_flag = True
             self.save_mesh_skewness = True
 
-        if self.case_type == 'komegasst':
+        if self.case_type == 'komegasst' or 'komega':
             self.foam_field_list = ['k',
                                 'omega',
                                 'epsilon',
@@ -87,15 +94,14 @@ class MLDatasetFromFoamCase:
                                 'Shat',
                                 'R',
                                 'Rhat',
-                                'Ap',
+                                'Ao',
                                 'Ak',
-                                'Aphat',
+                                'Aohat',
                                 'Akhat',
                                 'gradU',
                                 'skewness',
                                 'C'
                                 ]
-            self.writeFieldsApplication='writeFields_komegasstMean'
             self.read_invariants_flag = True
             self.read_basis_tensors_flag = True
             self.read_q_flag = True
@@ -115,7 +121,24 @@ class MLDatasetFromFoamCase:
                                 'bMean',
                                 'C'
                                 ]
-            self.writeFieldsApplication='writeFields_LES'
+            self.read_invariants_flag = False
+            self.read_basis_tensors_flag = False
+            self.read_q_flag = False
+            self.read_lda_flag = False
+            self.save_mesh_skewness = False
+            
+        if self.case_type == 'DNS':
+            self.foam_field_list = [
+                                'U',
+                                'gradU',
+                                'TauDNS',
+                                'S',
+                                'R',
+                                'k',
+                                'a',
+                                'b',
+                                'C'
+                                ]
             self.read_invariants_flag = False
             self.read_basis_tensors_flag = False
             self.read_q_flag = False
@@ -133,7 +156,7 @@ class MLDatasetFromFoamCase:
             for i in range(10):
                 self.foam_field_list.append(f'T{i+1}')
         if self.read_q_flag:
-            for i in range(4):
+            for i in range(9):
                 self.foam_field_list.append(f'q{i+1}')
         if self.read_lda_flag:
             for i in range(5):
@@ -142,26 +165,31 @@ class MLDatasetFromFoamCase:
         print(self.foam_field_list)
 
     def writeFields(self):
-        if not os.path.isdir(os.path.join(self.foam_parent_dir, '02-writeFields')):
-            os.mkdir(os.path.join(self.foam_parent_dir, '02-writeFields'))
+        """Copies the foam case to the writeFields directory, changes startTime to latestTime, then calls the write_fields_application"""
+        if not os.path.isdir(os.path.join(self.foam_parent_dir, 'writeFields')):
+            os.mkdir(os.path.join(self.foam_parent_dir, 'writeFields'))
 
-        self.writeFieldsDirectory = os.path.join(self.foam_parent_dir,'02-writeFields',self.case_name)
-        if (self.overwrite_flag):
+        self.writeFieldsDirectory = os.path.join(self.foam_parent_dir,'writeFields',self.case_name)
+        if (self.write_fields_flag):
             print('[dataFoam] Writing new fields....')
             if (os.path.isdir(os.path.join(self.writeFieldsDirectory))):
                 os.system(f'rm -rf {self.writeFieldsDirectory}')
             os.system('cp -rf '+self.directory+' '+self.writeFieldsDirectory)
-            #os.system('cp -r '+os.path.join(self.foam_parent_dir,'02-writeFields','Runwrite')+' '+self.writeFieldsDirectory)
             os.chdir(self.writeFieldsDirectory)
+            changeFoamSystemDictEntry(os.path.join(self.writeFieldsDirectory),'controlDict','startFrom','latestTime')
             if self.save_mesh_skewness:
-                os.system(f'checkMesh -writeFields skewness -time {self.endtime} | tee log.checkMesh')
+                print(f'[dataFoam] Running checkMesh....')
+                os.system(f'checkMesh -writeFields skewness -time {self.endtime} > log.checkMesh')
             print('[dataFoam] Getting cell centres for the case....')
-            self.C = get_cell_centres(self.writeFieldsDirectory)     
-            os.system(f'{self.writeFieldsApplication} | tee log.writeFields')
+            self.C = get_cell_centres(self.writeFieldsDirectory)  
+            print(f'[dataFoam] Running {self.writeFieldsApplication}....')
+            os.system(f'{self.writeFieldsApplication} > log.writeFields')
         else:
             print('[dataFoam] Skipping writing fields....')
+        return
 
     def saveDataset(self,dataset_prefix):
+        """Read foam fields, save foam fields as numpy binaries"""
         self.foamdatatime = os.path.join(self.writeFieldsDirectory,str(self.endtime))
         self.dataset_prefix = dataset_prefix #+ '_'+self.case_name
         self.save_dir = os.path.join(self.data_save_path,dataset_prefix)
@@ -169,77 +197,9 @@ class MLDatasetFromFoamCase:
         print('[dataFoam] Reading fields.... ')
         for field in self.foam_field_list:
             foamfield = readFoamField(os.path.join(self.foamdatatime,field))
+            if isinstance(foamfield,float):
+                print(f'[dataFoam] Field {field} is all {foamfield}.')
+                foamfield = np.ones(len(self.C))*foamfield
             print(f'[dataFoam] Saving {field}, with shape {foamfield.shape}')
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+field+'.npy'),foamfield)        
-
-"""
-        for foam_scalar in self.foam_scalars_dict:
-            self.foam_scalars_dict[foam_scalar] = readFoamScalar(os.path.join(self.foamdatatime,foam_scalar),cells=self.cells)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+foam_scalar+'.npy'),self.foam_scalars_dict[foam_scalar])
-            
-        print('Reading tensors....\n ')
-        for foam_tensor in self.foam_tensors_dict:
-            self.foam_tensors_dict[foam_tensor] = readFoamTensor(os.path.join(self.foamdatatime,foam_tensor),cells=self.cells)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+foam_tensor+'.npy'),self.foam_tensors_dict[foam_tensor]) 
-
-        print('Reading symmtensors....\n ')
-
-        for foam_symmtensor in self.foam_symmtensors_dict:
-            self.foam_symmtensors_dict[foam_symmtensor] = readFoamSymmTensor(os.path.join(self.foamdatatime,foam_symmtensor),cells=self.cells)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+foam_symmtensor+'.npy'),self.foam_symmtensors_dict[foam_symmtensor]) 
-
-        if self.read_invariants_flag:
-            print('Reading invariants....\n ')
-            self.read_invariants()
-            print('Reading basis tensors....\n ')
-            self.read_basis_tensors()
-            print('Reading q....\n ')
-            self.read_q()
-            print('Reading lambdas....\n ')
-            self.read_lda()
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_q.npy'), self.q)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_lambda.npy'), self.lda)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_Tensors.npy'), self.basis_tensors)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_I1.npy'), self.I1)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_I2.npy'), self.I2)
-            
-        if self.case_type == 'reference_mapped':
-            pfv_x = self.foam_scalars_dict['gradaperpxx_x'] + self.foam_scalars_dict['gradaperpxy_x'] + self.foam_scalars_dict['gradaperpxz_x']
-            pfv_y = self.foam_scalars_dict['gradaperpxy_y'] + self.foam_scalars_dict['gradaperpyy_y'] + self.foam_scalars_dict['gradaperpyz_y']
-            pfv_z = self.foam_scalars_dict['gradaperpxz_z'] + self.foam_scalars_dict['gradaperpyz_z'] + self.foam_scalars_dict['gradaperpzz_z']
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+'pfv_x'+'.npy'),pfv_x)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+'pfv_y'+'.npy'),pfv_y)
-            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+'pfv_z'+'.npy'),pfv_z)
-
-    
-    def get_cell_volumes(self):
-        self.CV = get_cell_volumes(self.directory)
- 
-    def read_basis_tensors(self):
-        bigT = np.empty((self.cells,10,3,3))
-        for TN in range(0,10):
-            tensorname = 'T' +str(TN+1)
-            if TN == 0:
-                bigT[:,TN,:,:] = readFoamSymmTensor(os.path.join(self.foamdatatime,tensorname),cells=self.cells)[:,:,:]
-            else:
-                bigT[:,TN,:,:] = readFoamTensor(os.path.join(self.foamdatatime,tensorname),cells=self.cells)[:,:,:]
-        self.basis_tensors = bigT
-    
-    def read_invariants(self):
-        self.I1 = np.empty((self.cells,47))
-        for i in range(47):
-            self.I1[:,i] = readFoamScalar(os.path.join(self.foamdatatime,'I1_'+str(i+1)),cells=self.cells)
-        self.I2 = np.empty((self.cells,47))
-        for i in range(47):
-            self.I2[:,i] = readFoamScalar(os.path.join(self.foamdatatime,'I2_'+str(i+1)),cells=self.cells)
-    
-    def read_q(self):
-        self.q = np.empty((self.cells,4))
-        for i in range(4):
-            self.q[:,i] = readFoamScalar(os.path.join(self.foamdatatime,'q'+str(i+1)),cells=self.cells)
-            
-    def read_lda(self):
-        self.lda = np.empty((self.cells,5))
-        for i in range(5):
-            self.lda[:,i] = readFoamScalar(os.path.join(self.foamdatatime,'lambda'+str(i+1)),cells=self.cells)    
-""" 
+            np.save(os.path.join(self.data_save_path,self.dataset_prefix+'_'+field+'.npy'),foamfield)  
+        return      

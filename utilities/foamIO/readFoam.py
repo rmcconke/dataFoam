@@ -12,7 +12,9 @@ import Ofpp
 
 def readFoamField(file):
     field = Ofpp.parse_internal_field(file)
-    if field.ndim > 1: 
+    if isinstance(field, float):
+        return field
+    elif field.ndim > 1: 
         if field.shape[1] == 6:
             field = reshape_symmTensor(field)
         elif field.shape[1] == 9:
@@ -38,9 +40,9 @@ def get_cell_count(foam_directory):
                 if re.search(r'\s* note',line):
                     cells = int(re.search(r'nCells:(.+?) ',line).group(1))
                     break
-        print('    Found a mesh with number of cells: '+str(cells))
+        print('[dataFoam] Found a mesh with number of cells: '+str(cells))
     except:
-        raise LookupError('Could not find a mesh for the foam case '+foam_directory)
+        raise LookupError('[dataFoam] Could not find a mesh for the foam case '+foam_directory)
     return cells
 
 def get_endtime(foam_directory):
@@ -56,28 +58,20 @@ def get_endtime(foam_directory):
                 if int(result) > endtime:
                     endtime=int(result)
                 
-        print('    Found endtime: '+ str(endtime))
+        print('[dataFoam] Found endtime: '+ str(endtime))
     except: 
-        raise LookupError('Could not get endtime for the foam case '+foam_directory)
+        raise LookupError('[dataFoam] Could not get endtime for the foam case '+foam_directory)
     return endtime
 
 def get_cell_centres(foam_directory):
     # Returns three vectors, Cx, Cy, Cz. Runs writeCellCentres then reads the files.
     logfile = os.path.join(foam_directory,'log.writeCellCentres')
-    os.system(f'postProcess -case {foam_directory} -func writeCellCentres | tee {logfile}')
+    print(f'[dataFoam] Running writeCellCentres....')
+    os.system(f'postProcess -case {foam_directory} -func writeCellCentres > {logfile}')
     cell_centres = readFoamField(os.path.join(foam_directory,'0/C'))
     #Cx, Cy, Cz = cell_centres[:,0], cell_centres[:,1], cell_centres[:,2]  
     return cell_centres
     
-def cleanFoamFile(file):
-    # Uses sed to strip the leading/trailing brackets from a file, creating
-    # a new file with _cleaned appended. Used for reading vectors/tensors
-    os.system("sed 's/(//g' " + file +' > ' + file+'_cleaned')
-    os.system("sed -i 's/)//g' " + file+'_cleaned')
-    
-def removeCleanedFoamFile(file):
-    os.system('rm -r '+file+'_cleaned')
-
 def readLineofFile(file,line):
     # Returns a line of a file.
     a_file = open(file)
@@ -88,5 +82,5 @@ def readLineofFile(file,line):
             #print(line)
             read = line
     a_file.close()
-    print('    Read line '+str(line) + ' of file '+ file + ' : '+ str(read))
+    print('[dataFoam] Read line '+str(line) + ' of file '+ file + ' : '+ str(read))
     return read

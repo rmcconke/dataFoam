@@ -1,0 +1,44 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2006                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : bed1305d-20201029 OPENFOAM=2006 patch=201012
+Arch   : "LSB;label=32;scalar=64"
+Exec   : postProcess -func writeCellCentres
+Date   : Nov 14 2021
+Time   : 18:40:03
+Host   : 3970X
+PID    : 107311
+I/O    : uncollated
+Case   : /home/ryley/WDK/ML/foam/dataset/new_dataset/DNS/case_1p0
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+--> FOAM Warning : 
+    From void* Foam::dlLibraryTable::openLibrary(const Foam::fileName&, bool)
+    in file db/dynamicLibrary/dlLibraryTable/dlLibraryTable.C at line 65
+    Could not load "libmyIncompresssibleRASModels.so"
+libmyIncompresssibleRASModels.so: cannot open shared object file: No such file or directory
+Create mesh for time = 0
+
+Time = 0
+
+Reading fields:
+
+Executing functionObjects
+writeCellCentres writeCellCentres write:
+    writing cell-volumes field C to 0
+    Writing the x component field of the cell-centres Cx to 0
+    Writing the y component field of the cell-centres Cy to 0
+    Writing the z component field of the cell-centres Cz to 0
+
+End
+

@@ -1,0 +1,15 @@
+#!/bin/sh
+cd ${0%/*} || exit 1                        # Run from this directory
+. $WM_PROJECT_DIR/bin/tools/RunFunctions    # Tutorial run functions
+decomposePar -force
+mpirun -n 16 simpleFoam -parallel | tee log.simpleFoam
+reconstructPar 
+rm -r processor*
+
+
+
+
+
+
+
+#------------------------------------------------------------------------------
