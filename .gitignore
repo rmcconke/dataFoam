@@ -9,3 +9,5 @@ example_data/output_example.csv
 test_data/numpy/*
 test_data/writeFields
 
+*linux64*
+
