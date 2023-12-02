@@ -35,7 +35,8 @@ dimensions      [0 1 -1 0 0 0 0];
 
 internalField nonuniform List<vector>
 """)
-    file.write(str(cells) + """ (
+    file.write(str(cells) + """ 
+(
 """)
     np.savetxt(file, array_write,fmt='%s')
     file.write(""");
@@ -87,7 +88,8 @@ dimensions      [0 2 -2 0 0 0 0];
 
 internalField nonuniform List<symmTensor>
 """)
-    file.write(str(cells) + """ (
+    file.write(str(cells) + """
+(
 """)
     np.savetxt(file, array_write,fmt='%s')
     file.write(""");

@@ -8,8 +8,8 @@ Created on Thu Oct 21 13:22:26 2021
 
 import os
 import numpy as np
-from utilities.foamIO.readFoam import readFoamField, get_endtime, get_cell_centres
-from utilities.foamIO.changeFoamSystemDictEntry import changeFoamSystemDictEntry
+from dataFoam.utilities.foamIO.readFoam import readFoamField, get_endtime, get_cell_centres
+from dataFoam.utilities.foamIO.changeFoamSystemDictEntry import changeFoamSystemDictEntry
 
 class MLDatasetFromFoamCase: 
     """ 
