@@ -30,6 +30,8 @@ class MLDatasetFromFoamCase:
 
         print('[dataFoam] Initializing MLDatasetFromFoamCase....')
         self.case_type = case_type
+        print('[dataFoam] Case type: '+self.case_type)
+
         self.foam_parent_dir = foam_parent_dir
         self.directory = os.path.join(self.foam_parent_dir,case_name)
         print('[dataFoam] Case directory: '+self.directory)
@@ -38,74 +40,103 @@ class MLDatasetFromFoamCase:
         self.data_save_path = data_save_path
         self.write_fields_flag=write_fields_flag
 
-        self.endtime = get_endtime(self.directory)
 
-        
-        if self.case_type == 'kepsilonphitf':
-            self.foam_field_list = ['k',
-                                'epsilon',
-                                'T_t_ke',
-                                'T_t_nut',
-                                'T_k',
+        if self.case_type == 'kepsilon':
+            self.foam_field_list = [
                                 'U',
-                                'gradp',
-                                'gradk',
-                                'gradv2',
+                                'k',
+                                'epsilon',
+                                'nut',
                                 'p',
+
+                                'gradU',
+                                'gradk',
+                                'gradepsilon',
+
+                                'gradnut',
+                                'gradp',
+
+                                'turbR',
+                                'divturbR',
+
                                 'DUDt',
                                 'wallDistance',
-                                'nut',
-                                'phit',
-                                'f',
                                 'S',
-                                'Shat',
                                 'R',
-                                'Rhat',
-                                'Av2',
-                                'Ak',
-                                'Av2hat',
-                                'Akhat',
-                                'gradU',
                                 'skewness',
                                 'C'
                                 ]
-            self.read_invariants_flag = True
-            self.read_basis_tensors_flag = True
+            self.read_invariants_flag = False
+            self.read_basis_tensors_flag = False
             self.read_q_flag = True
-            self.read_lda_flag = True
+            self.read_lda_flag = False
             self.save_mesh_skewness = True
 
-        if self.case_type == 'komegasst' or 'komega':
-            self.foam_field_list = ['k',
-                                'omega',
-                                'epsilon',
-                                'T_t_ke',
-                                'T_t_nut',
-                                'T_k',
+        if self.case_type == 'kepsilonphitf':
+            self.foam_field_list = [
                                 'U',
-                                'gradp',
-                                'gradk',
-                                'gradomega',
+                                'k',
+                                'epsilon',
+                                'phit',
+                                'f',
+                                'nut',
                                 'p',
+
+                                'gradU',
+                                'gradk',
+                                'gradepsilon',
+                                'gradphit',
+                                'gradf',
+                                'gradnut',
+                                'gradp',
+
+                                'v2',
+                                'gradv2',
+
+                                'turbR',
+                                'divturbR',
+
                                 'DUDt',
                                 'wallDistance',
-                                'nut',
                                 'S',
-                                'Shat',
                                 'R',
-                                'Rhat',
-                                'Ao',
-                                'Ak',
-                                'Aohat',
-                                'Akhat',
-                                'gradU',
                                 'skewness',
                                 'C'
                                 ]
-            self.read_invariants_flag = True
-            self.read_basis_tensors_flag = True
+            self.read_invariants_flag = False
+            self.read_basis_tensors_flag = False
             self.read_q_flag = True
-            self.read_lda_flag = True
+            self.read_lda_flag = False
+            self.save_mesh_skewness = True
+
+        if self.case_type == 'komegasst' or self.case_type == 'komega':
+            self.foam_field_list = ['U',
+                                'k',
+                                'epsilon',
+                                'omega',
+                                'nut',
+                                'p',
+
+                                'gradU',
+                                'gradk',
+                                'gradepsilon',
+                                'gradomega',
+                                'gradnut',
+                                'gradp',
+
+                                'turbR',
+                                'divturbR',
+                                'DUDt',
+                                'wallDistance',
+                                'S',
+                                'R',
+                                'skewness',
+                                'C'
+                                ]
+            self.read_invariants_flag = False
+            self.read_basis_tensors_flag = False
+            self.read_q_flag = True
+            self.read_lda_flag = False
             self.save_mesh_skewness = True
 
         if self.case_type == 'LES':
@@ -131,7 +162,8 @@ class MLDatasetFromFoamCase:
             self.foam_field_list = [
                                 'U',
                                 'gradU',
-                                'TauDNS',
+                                'tau',
+                                'divtau',
                                 'S',
                                 'R',
                                 'k',
@@ -156,7 +188,7 @@ class MLDatasetFromFoamCase:
             for i in range(10):
                 self.foam_field_list.append(f'T{i+1}')
         if self.read_q_flag:
-            for i in range(9):
+            for i in range(4):
                 self.foam_field_list.append(f'q{i+1}')
         if self.read_lda_flag:
             for i in range(5):
@@ -179,6 +211,7 @@ class MLDatasetFromFoamCase:
             changeFoamSystemDictEntry(os.path.join(self.writeFieldsDirectory),'controlDict','startFrom','latestTime')
             if self.save_mesh_skewness:
                 print(f'[dataFoam] Running checkMesh....')
+                self.endtime = get_endtime(self.directory)
                 os.system(f'checkMesh -writeFields skewness -time {self.endtime} > log.checkMesh')
             print('[dataFoam] Getting cell centres for the case....')
             self.C = get_cell_centres(self.writeFieldsDirectory)  
@@ -190,6 +223,7 @@ class MLDatasetFromFoamCase:
 
     def saveDataset(self,dataset_prefix):
         """Read foam fields, save foam fields as numpy binaries"""
+        self.endtime = get_endtime(self.directory)
         self.foamdatatime = os.path.join(self.writeFieldsDirectory,str(self.endtime))
         self.dataset_prefix = dataset_prefix #+ '_'+self.case_name
         self.save_dir = os.path.join(self.data_save_path,dataset_prefix)

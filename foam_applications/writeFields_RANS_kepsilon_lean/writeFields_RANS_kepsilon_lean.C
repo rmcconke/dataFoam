@@ -48,35 +48,68 @@ int main(int argc, char *argv[])
     #include "createControl.H"
     #include "createFields.H"
 
-    Info<< "Time = " << runTime.timeName() << nl << endl;
 
-    Info<< "Calculating extra DNS fields...." << nl << endl;
+	Info<< "Time = " << runTime.timeName() << nl << endl;
 
-    dimensionedScalar k_small("k_small",dimensionSet(0,2,-2,0,0,0,0), 1E-10);
-    k = 0.5*tr(tau); //TKE
-    a = dev(tau); //Anisotropic part of Reynolds stress tensor
-    b = a/(max(k_small,2.0*k)); //Non-dimensional anisotropy tensor
+    Info<< "Calculating extra RANS fields...." << nl << endl;
 
-    // Velocity gradient and related tensors
-    gradU = fvc::grad(U);
-    gradU = gradU.T(); 	// Output the Jacobian, a more common form of the velocity gradient tensor
-    S = symm(fvc::grad(U));
-    R = -skew(fvc::grad(U)); // grad(UMean) produces the transpose of the Jacobian, RMean is defined based on the Jacobian, hence negative sign
+	T_t_ke = k/epsilon; //Time scale based on k and epsilon
+
+	gradU = fvc::grad(U);
+	gradU = gradU.T(); 	// Output the Jacobian, a more common form of the velocity gradient tensor
+
+	turbR = (2.0/3.0)*I*k - (nut)*dev(twoSymm(fvc::grad(U)));
+	divturbR=fvc::div(turbR);
+
+	DUDt = U & gradU.T(); 	// Checked with component wise expression for the convective derivative
+
+	S = symm(fvc::grad(U));
+	R = -skew(fvc::grad(U)); // grad(U) produces the transpose of the Jacobian, R is defined based on the Jacobian, hence negative sign
+
+	// Pressure gradient
+	gradp = fvc::grad(p);
+	gradepsilon = fvc::grad(epsilon);
+	gradnut = fvc::grad(nut);
+
+	// TKE gradient
+	gradk = fvc::grad(k);
+
+	// Other turbulence fields
+	wallDistance = wallDist(mesh).y();
+
+	// Some q's from ref Kaandorp 2020, 10.1016/j.compfluid.2020.104497
+	q1 = 0.5 * (mag(R)*mag(R) - mag(S)*mag(S)) /(max(mag(S)*mag(S),SMALL_S2)); // Ratio of excess rotation rate to strain rate
+	q2 = min((sqrt(k)*wallDistance/(50.0*turbulence->nu())),2.0);  // Wall distance based Reynolds Number
+	q3 = T_t_ke * mag(S); // Ratio of turbulent time scale to mean strain time scale
+	q4 = mag(turbR)/(k); //Ratio of total to 1/2 * normal Reynolds stresses (TKE)
+
+	// Other q's (i.e., heuristic input features) can also be added to this code, by adding a new field in createFields.H, and assigning values here
+
+    Info<< "Writing extra RANS fields...." << nl << endl;
+
+	// Write fields
+	turbR.write();
+	divturbR.write();
+	q1.write();
+	q2.write();
+	q3.write();
+	q4.write();
+	S.write();
+	R.write();
+	gradp.write();
+	gradk.write();
+	gradU.write();
+	gradepsilon.write();
+	gradnut.write();
+	p.write();
+	epsilon.write();
+	runTime.write();
+	DUDt.write();
+	wallDistance.write();
+	runTime.printExecutionTime(Info);
     
-    divtau = fvc::div(tau);
-    Info<< "Writing extra DNS fields...." << nl << endl;
-    tau.write();
-    divtau.write();
-    a.write();
-    b.write();
-    k.write();
-    gradU.write();
-    S.write();
-    R.write();
-    Info<< "Finished writing extra DNS fields." << nl << endl;
+	Info<< "Finished writing extra RANS fields." << nl << endl;
 
-    runTime.printExecutionTime(Info);
-    
     Info<< "End\n" << endl;
 
     return 0;

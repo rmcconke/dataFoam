@@ -23,8 +23,8 @@ def interpolate_fields_fine_coarse(fine_field_dir,
     """
 
     print('[dataFoam] Interpolating fields from '+fine_field_dir+' to '+coarse_field_dir)
-    C_fine = np.load(os.path.join(fine_field_dir,fine_case_prefix_and_name+'_C.npy'))
-    C_coarse = np.load(os.path.join(coarse_field_dir,coarse_case_prefix_and_name+'_C.npy'))
+    C_fine = np.load(os.path.join(fine_field_dir,fine_case_prefix_and_name+'_C.npy'))[:,0:2]
+    C_coarse = np.load(os.path.join(coarse_field_dir,coarse_case_prefix_and_name+'_C.npy'))[:,0:2]
 
     print('[dataFoam] Fine field: '+fine_case_prefix_and_name+', '+str(len(C_fine))+ ' points')
     print('[dataFoam] Coarse field: '+coarse_case_prefix_and_name+', '+str(len(C_coarse))+ ' points')
