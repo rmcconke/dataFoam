@@ -27,18 +27,32 @@ volVectorField U
 );
 
 // Reynolds stress tensor
-Info<< "Reading field TauDNS\n" << endl;
+Info<< "Reading field tau\n" << endl;
 volSymmTensorField tau 
 (
 	IOobject
 	(
-		"TauDNS",
+		"tau",
 		runTime.timeName(),
 		mesh,
 		IOobject::MUST_READ,
 		IOobject::AUTO_WRITE
 ),
 	mesh
+); 
+
+volVectorField divtau
+(
+	IOobject
+	(
+		"divtau",
+		runTime.timeName(),
+		mesh,
+		IOobject::NO_READ,
+		IOobject::AUTO_WRITE
+),
+	mesh,
+	dimensionedVector("divtau",dimensionSet(0,1,-2,0,0,0,0),vector::zero)
 ); 
 
 volSymmTensorField a

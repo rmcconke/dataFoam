@@ -66,7 +66,7 @@ def writeFoam_TauDNS_DUCT(filename, tau):
     leftbracket = np.repeat('(',cells)
     rightbracket = np.repeat(')',cells)
     array_write = np.column_stack((leftbracket,tau,rightbracket))
-    print('[dataFoam] Writing TauDNS to file '+filename)
+    print('[dataFoam] Writing tau to file '+filename)
     file = open(filename,'w')
     file.write("""/*--------------------------------*- C++ -*----------------------------------*\
 | =========                 |                                                 |
@@ -80,7 +80,7 @@ FoamFile
     version     2.0;
     format      ascii;
     class       volSymmTensorField;
-    object      TauDNS;
+    object      tau;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

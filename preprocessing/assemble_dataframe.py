@@ -43,16 +43,21 @@ def assemble_dataframe(data_parent_dir: str,
             for field_name in field_dict[field_dir]:
                 print(f'            {field_name}')
 
-                # Try to load the numpy field, raise fatal error if it can't be found
+                # Try to load the numpy field, fill with NaNs if it cant be found
                 try: 
                     field = np.float32(np.load(os.path.join(data_parent_dir,field_dir,field_dir+'_'+case+'_'+field_name+'.npy')))
+                    field_type = get_field_type(field_name,field)
                 except:
-                    raise LookupError('Cannot find field '+field_name)
-                
-                field_type = get_field_type(field_name,field)
+                    # Need to get the length of the NaN array somehow - current (hacky) solution is to take the length of the U field, since every simulation type has a U field.
+                    print(f'            {field_name} not found.')
+                    field_type = None
+                    #len_field = len(np.float32(np.load(os.path.join(data_parent_dir,field_dir,field_dir+'_'+case+'_'+'U'+'.npy'))))
+                    #field = np.empty(len_field)
+                    #field[:] = np.nan
+                    #dataframe_case = add_data(dataframe_case,field_dir,field_name,field)
 
                 # Depending on the field type, add different entry format to the dataframe. Since the dataframe is tabular, it needs columns, and tensors need to be split up into individual entries.
-                
+
                 # Scalars can be added directly
                 if field_type == 'scalar':
                     dataframe_case = add_data(dataframe_case,field_dir,field_name,field)
